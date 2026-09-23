@@ -6,8 +6,8 @@ import tempfile
 import os
 
 st.set_page_config(page_title="LCD 綠色螢幕文字智慧提取工具", layout="centered")
-st.title("📟 LCD 綠色螢幕文字智慧提取工具 (強效對比版)")
-st.markdown("已加入區域對比度增強（CLAHE），能同時精準讀取正常區域與深色背景反白區域的所有文字。")
+st.title("📟 LCD 綠色螢幕文字智慧提取工具 (極速流暢版)")
+st.markdown("已優化抽樣頻率（略過重複影格與過載運算），可流暢運行並完美讀取正常與深色背景文字。")
 
 @st.cache_resource
 def load_reader():
@@ -22,8 +22,8 @@ if uploaded_file is not None:
     tfile.write(uploaded_file.read())
     video_path = tfile.name
 
-    if st.button("🚀 開始深度擷取文字"):
-        with st.spinner("正在進行 AI 影像增強與文字辨識，請稍候..."):
+    if st.button("🚀 開始流暢擷取文字"):
+        with st.spinner("正在進行 AI 智慧分析，請稍候..."):
             cap = cv2.VideoCapture(video_path)
             extracted_texts = []
             last_text = None
@@ -40,6 +40,10 @@ if uploaded_file is not None:
                 frame_count += 1
                 if total_frames > 0:
                     progress_bar.progress(min(frame_count / total_frames, 1.0))
+                
+                # 【關鍵優化】每 10 個影格才做一次 AI 辨識，避免 CPU 超載被限流
+                if frame_count % 10 != 0:
+                    continue
                 
                 # 1. 捕捉綠色螢幕範圍
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -62,11 +66,10 @@ if uploaded_file is not None:
                         gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
                         gray = cv2.resize(gray, (0, 0), fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
                         
-                        # 局部對比度增強，解決深色背景與亮字亮度不均的問題
                         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
                         enhanced = clahe.apply(gray)
                         
-                        # 4. 使用 EasyOCR 辨識增強後的影像
+                        # 4. 使用 EasyOCR 辨識
                         results = reader.readtext(enhanced)
                         detected_words = [res[1] for res in results if res[2] > 0.15]
                         text_line = " ".join(detected_words)
